@@ -27,25 +27,25 @@ export function Navbar() {
   const showHeaderSearch = pathname !== '/' && !pathname.startsWith('/search');
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 dark:border-slate-800/80 bg-white/85 dark:bg-surface-dark/85 backdrop-blur-md transition-colors shadow-xs">
-      {/* Brand accent gradient bar */}
-      <div className="h-[2.5px] w-full bg-gradient-to-r from-primary-600 via-secondary-500 to-spark" />
+    <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 dark:border-white/[0.07] bg-white/80 dark:bg-[#090A0F]/80 backdrop-blur-xl transition-all shadow-xs">
+      {/* Subtle top ambient indicator */}
+      <div className="h-[2px] w-full bg-gradient-to-r from-indigo-500 via-cyan-400 to-amber-400 opacity-80" />
 
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
+      <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4 max-w-7xl">
         {/* Logo */}
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-6 flex-shrink-0">
           <Logo size="md" />
         </div>
 
-        {/* Header Search Box (Visible when not on homepage) */}
+        {/* Header Command Search (Visible when not on homepage) */}
         {showHeaderSearch && (
           <div className="hidden md:flex flex-1 max-w-md mx-4 animate-in fade-in-50 duration-200">
-            <SearchBox placeholder="Search doubts, solutions, notes..." />
+            <SearchBox placeholder="Type ⌘K to search solutions, notes..." />
           </div>
         )}
 
         {/* Desktop Nav Links */}
-        <nav className="hidden lg:flex items-center gap-1.5">
+        <nav className="hidden lg:flex items-center gap-1">
           {navLinks.map((link) => {
             const Icon = link.icon;
             const isActive = pathname.startsWith(link.href);
@@ -54,37 +54,37 @@ export function Navbar() {
                 key={link.name}
                 href={link.href}
                 className={cn(
-                  'flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium transition-all',
+                  'flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold tracking-wide transition-all group relative',
                   isActive
-                    ? 'text-primary-700 dark:text-primary-300 bg-primary-50 dark:bg-primary-950/60 font-semibold shadow-xs border border-primary-100/80 dark:border-primary-900/50'
-                    : 'text-slate-600 dark:text-slate-300 hover:text-ink dark:hover:text-white hover:bg-slate-100/80 dark:hover:bg-slate-800/60'
+                    ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 dark:bg-white/[0.06] border border-indigo-500/20 dark:border-white/[0.1]'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-white/[0.04]'
                 )}
               >
-                <Icon className={cn('w-4 h-4', isActive ? 'text-primary-600 dark:text-primary-400' : 'text-slate-400')} />
+                <Icon className={cn('w-3.5 h-3.5 transition-transform group-hover:scale-110', isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400')} />
                 {link.name}
               </Link>
             );
           })}
         </nav>
 
-        {/* Actions (Theme Toggle & Mobile Menu) */}
-        <div className="flex items-center gap-2.5">
+        {/* Actions (Theme Toggle & Admin) */}
+        <div className="flex items-center gap-2 flex-shrink-0">
           <ThemeToggle />
 
-          {/* Admin portal shortcut for educators/admins */}
+          {/* Admin portal shortcut for educators */}
           <Link
             href="/admin"
-            className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
-            title="Admin Portal"
+            className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-white/[0.04] transition-colors border border-transparent hover:border-slate-200 dark:hover:border-white/[0.08]"
+            title="Admin Console"
           >
-            <ShieldAlert className="w-3.5 h-3.5 text-primary-500" />
-            <span>Admin</span>
+            <ShieldAlert className="w-3.5 h-3.5 text-indigo-500" />
+            <span className="font-mono text-[11px]">Admin</span>
           </Link>
 
           {/* Mobile hamburger toggle */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none transition-colors border border-slate-200/60 dark:border-slate-800"
+            className="lg:hidden p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.05] focus:outline-none transition-colors border border-slate-200 dark:border-white/[0.08]"
             aria-label="Toggle menu"
           >
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}

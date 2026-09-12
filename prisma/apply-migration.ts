@@ -80,6 +80,18 @@ async function run() {
     console.warn('Note on Trigram indexes:', e.message);
   }
 
+  console.log('4. Creating compound performance indexes...');
+  try {
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "questions_subject_created_idx" ON "questions" ("subjectId", "createdAt" DESC);`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "questions_status_views_idx" ON "questions" ("status", "views" DESC);`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "questions_status_created_idx" ON "questions" ("status", "createdAt" DESC);`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "notes_subject_created_idx" ON "notes" ("subjectId", "createdAt" DESC);`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "notes_status_created_idx" ON "notes" ("status", "createdAt" DESC);`);
+    console.log('✔ Compound performance indexes created');
+  } catch (e: any) {
+    console.warn('Note on Compound indexes:', e.message);
+  }
+
   console.log('All migrations completed!');
   process.exit(0);
 }

@@ -21,7 +21,21 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 
-export const revalidate = 3600;
+export const revalidate = 300; // 5-minute ISR
+
+export async function generateStaticParams() {
+  try {
+    const notes = await db.note.findMany({
+      where: { status: 'PUBLISHED' },
+      select: { slug: true },
+      take: 50,
+      orderBy: { createdAt: 'desc' },
+    });
+    return notes.map((n) => ({ slug: n.slug }));
+  } catch {
+    return [];
+  }
+}
 
 interface NoteDetailPageProps {
   params: { slug: string };

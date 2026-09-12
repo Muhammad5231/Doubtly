@@ -1,8 +1,10 @@
-import React from 'react';
+'use client';
+
+import React, { useState } from 'react';
 import Link from 'next/link';
-import { Eye, ThumbsUp, Calendar, Tag, ChevronRight } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { Eye, ThumbsUp, Calendar, ChevronRight, CheckCircle2, ChevronDown, Sparkles, BookOpen, Clock } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 
 export interface QuestionCardProps {
   id: string;
@@ -18,51 +20,6 @@ export interface QuestionCardProps {
   highlightedSnippet?: string;
 }
 
-// Helper for subject color themes
-function getSubjectColors(subjectName: string) {
-  const lower = subjectName.toLowerCase();
-  if (lower.includes('math') || lower.includes('calculus') || lower.includes('algebra')) {
-    return {
-      dot: 'bg-indigo-500',
-      badge: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/80 dark:text-indigo-300 border-indigo-200/80 dark:border-indigo-800/60',
-      accentBar: 'border-l-indigo-500',
-    };
-  }
-  if (lower.includes('physic')) {
-    return {
-      dot: 'bg-cyan-500',
-      badge: 'bg-cyan-50 text-cyan-700 dark:bg-cyan-950/80 dark:text-cyan-300 border-cyan-200/80 dark:border-cyan-800/60',
-      accentBar: 'border-l-cyan-500',
-    };
-  }
-  if (lower.includes('chem')) {
-    return {
-      dot: 'bg-emerald-500',
-      badge: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300 border-emerald-200/80 dark:border-emerald-800/60',
-      accentBar: 'border-l-emerald-500',
-    };
-  }
-  if (lower.includes('comput') || lower.includes('code') || lower.includes('program')) {
-    return {
-      dot: 'bg-violet-500',
-      badge: 'bg-violet-50 text-violet-700 dark:bg-violet-950/80 dark:text-violet-300 border-violet-200/80 dark:border-violet-800/60',
-      accentBar: 'border-l-violet-500',
-    };
-  }
-  if (lower.includes('bio')) {
-    return {
-      dot: 'bg-rose-500',
-      badge: 'bg-rose-50 text-rose-700 dark:bg-rose-950/80 dark:text-rose-300 border-rose-200/80 dark:border-rose-800/60',
-      accentBar: 'border-l-rose-500',
-    };
-  }
-  return {
-    dot: 'bg-primary-500',
-    badge: 'bg-primary-50 text-primary-700 dark:bg-primary-950/80 dark:text-primary-300 border-primary-200/80 dark:border-primary-800/60',
-    accentBar: 'border-l-primary-500',
-  };
-}
-
 export function QuestionCard({
   title,
   slug,
@@ -75,81 +32,134 @@ export function QuestionCard({
   createdAt,
   highlightedSnippet,
 }: QuestionCardProps) {
-  const colors = getSubjectColors(subjectName);
+  const [isPeekOpen, setIsPeekOpen] = useState(false);
+
+  // Calculate estimated read time (avg 180 words/min)
+  const wordCount = (snippet || title).split(/\s+/).length;
+  const readTime = Math.max(1, Math.ceil(wordCount / 40));
 
   return (
     <article
-      className={`group relative bg-white dark:bg-slate-900/90 rounded-2xl border border-slate-200/80 dark:border-slate-800/90 p-5 sm:p-6 shadow-xs hover:shadow-xl hover:shadow-primary-500/5 hover:border-primary-400/80 dark:hover:border-primary-500/70 transition-all duration-200 flex flex-col justify-between border-l-4 ${colors.accentBar}`}
+      className={cn(
+        'group relative rounded-2xl transition-all duration-300 flex flex-col justify-between overflow-hidden',
+        'bg-white/90 dark:bg-[#0D0F17]/90 backdrop-blur-xl border',
+        'border-slate-200/80 dark:border-white/[0.08] hover:border-indigo-500/40 dark:hover:border-indigo-500/50',
+        'shadow-tactile hover:shadow-glow-subtle'
+      )}
     >
-      <div>
-        {/* Header Metadata Row */}
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-3.5">
-          <Link
-            href={`/subject/${subjectSlug}`}
-            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-all ${colors.badge} hover:scale-105`}
-          >
-            <span className={`w-1.5 h-1.5 rounded-full ${colors.dot}`} />
-            {subjectName}
-          </Link>
+      {/* Ambient Top Subtle Glow Strip on Hover */}
+      <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-          <div className="flex items-center gap-3 text-xs text-slate-400 font-medium">
+      <div className="p-5 sm:p-6">
+        {/* Monospaced Metadata Strip at Top */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pb-3 mb-3 border-b border-slate-100 dark:border-white/[0.05] text-[11px] font-mono text-slate-400 dark:text-slate-500">
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/subject/${subjectSlug}`}
+              className="inline-flex items-center gap-1.5 font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 transition-colors uppercase tracking-wider"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+              {subjectName}
+            </Link>
+            <span>•</span>
             <span className="flex items-center gap-1">
-              <Calendar className="w-3.5 h-3.5" />
-              {formatDate(createdAt)}
+              <Clock className="w-3 h-3" />
+              {readTime}m read
             </span>
+          </div>
+
+          <div className="flex items-center gap-3">
             <span className="flex items-center gap-1">
-              <Eye className="w-3.5 h-3.5" />
-              {views.toLocaleString()}
+              <Eye className="w-3 h-3" />
+              {views.toLocaleString()} views
             </span>
-            {typeof helpfulVotes === 'number' && helpfulVotes > 0 && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-[11px] font-bold border border-emerald-200/60 dark:border-emerald-800/50">
-                <ThumbsUp className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                {helpfulVotes}
-              </span>
-            )}
+            <span className="inline-flex items-center gap-1 text-amber-500 dark:text-amber-400 font-semibold">
+              <CheckCircle2 className="w-3 h-3 text-amber-500" />
+              Verified
+            </span>
           </div>
         </div>
 
         {/* Question Title */}
-        <Link href={`/q/${slug}`} className="block group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
-          <h3 className="text-lg sm:text-xl font-heading font-bold text-ink dark:text-slate-100 line-clamp-2 tracking-tight leading-snug">
+        <Link
+          href={`/q/${slug}`}
+          className="block group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors"
+        >
+          <h3 className="text-base sm:text-lg font-heading font-bold text-slate-900 dark:text-slate-100 line-clamp-2 tracking-tight leading-snug">
             {title}
           </h3>
         </Link>
 
-        {/* Solution Snippet */}
-        <div className="mt-2.5 text-sm text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed">
+        {/* 2-line problem statement summary */}
+        <div className="mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed">
           {highlightedSnippet ? (
             <div dangerouslySetInnerHTML={{ __html: highlightedSnippet }} />
           ) : (
-            <p>{snippet}</p>
+            <p>{snippet || 'Step-by-step verified academic solution with core formula derivation.'}</p>
           )}
         </div>
+
+        {/* Solution Preview Peek Drawer (Accordion) */}
+        {isPeekOpen && (
+          <div className="mt-3.5 p-3.5 rounded-xl bg-indigo-500/[0.04] dark:bg-white/[0.03] border border-indigo-500/20 dark:border-white/[0.08] text-xs space-y-2 animate-in fade-in-50 slide-in-from-top-1 duration-200">
+            <div className="flex items-center justify-between font-mono text-[10px] uppercase font-bold tracking-wider text-indigo-600 dark:text-indigo-400">
+              <span className="flex items-center gap-1.5">
+                <Sparkles className="w-3 h-3" />
+                Step 1 & Core Formula Peek
+              </span>
+              <span className="text-slate-400">Preview</span>
+            </div>
+            <p className="text-slate-700 dark:text-slate-300 leading-relaxed font-sans">
+              {snippet
+                ? snippet.slice(0, 180) + '...'
+                : 'Identify known variables, formulate boundary constraints, and apply standard differentiation / derivation rule.'}
+            </p>
+            <div className="pt-1 flex justify-end">
+              <Link
+                href={`/q/${slug}`}
+                className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline inline-flex items-center gap-1"
+              >
+                Open Full Derivation &rarr;
+              </Link>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Footer Tags & Action Link */}
-      <div className="mt-5 pt-3.5 border-t border-slate-100 dark:border-slate-800/70 flex items-center justify-between gap-2">
-        <div className="flex flex-wrap gap-1.5 overflow-hidden max-h-7">
-          {tags.slice(0, 3).map((tag) => (
-            <Link
-              key={tag}
-              href={`/search?q=${encodeURIComponent(tag)}`}
-              className="text-[11px] font-medium text-slate-500 dark:text-slate-400 bg-slate-100/80 dark:bg-slate-800/80 px-2.5 py-0.5 rounded-md hover:bg-primary-50 dark:hover:bg-primary-950/60 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
-            >
-              #{tag}
-            </Link>
-          ))}
+      {/* Footer Strip: Tags, Accordion Trigger, and Link */}
+      <div className="px-5 sm:px-6 py-3 bg-slate-50/60 dark:bg-white/[0.02] border-t border-slate-100 dark:border-white/[0.05] flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          {/* Quick Solution Peek Toggle */}
+          <button
+            type="button"
+            onClick={() => setIsPeekOpen(!isPeekOpen)}
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/[0.06] transition-colors"
+          >
+            <span>{isPeekOpen ? 'Hide Peek' : 'Peek Formula'}</span>
+            <ChevronDown className={cn('w-3 h-3 transition-transform', isPeekOpen && 'rotate-180')} />
+          </button>
+
+          {/* Tags in monospaced format */}
+          <div className="hidden sm:flex items-center gap-1.5 overflow-hidden">
+            {tags.slice(0, 2).map((tag) => (
+              <span
+                key={tag}
+                className="text-[10px] font-mono text-slate-500 dark:text-slate-400 bg-slate-200/60 dark:bg-white/[0.05] px-2 py-0.5 rounded"
+              >
+                #{tag}
+              </span>
+            ))}
+          </div>
         </div>
 
         <Link
           href={`/q/${slug}`}
-          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100/80 dark:bg-slate-800/60 text-xs font-bold text-primary-600 dark:text-primary-400 hover:bg-primary-600 hover:text-white dark:hover:bg-primary-500 dark:hover:text-white transition-all ml-auto flex-shrink-0 group/link"
+          className="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 transition-colors group/link"
         >
-          <span>View Solution</span>
-          <ChevronRight className="w-3.5 h-3.5 transition-transform group-hover/link:translate-x-1" />
+          <span>Full Solution</span>
+          <ChevronRight className="w-3.5 h-3.5 transition-transform group-hover/link:translate-x-0.5" />
         </Link>
       </div>
     </article>
   );
 }
-

@@ -3,9 +3,9 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Play, Calendar, BookOpen } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { Play, Calendar, CheckCircle2, Clock } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 
 export interface VideoCardProps {
   id: string;
@@ -27,13 +27,19 @@ export function VideoCard({
 }: VideoCardProps) {
   const [isPlaying, setIsPlaying] = useState(false);
 
-  // High quality thumbnail URL from YouTube CDN
   const thumbnailUrl = `https://i.ytimg.com/vi/${youtubeId}/hqdefault.jpg`;
 
   return (
-    <div className="group bg-white dark:bg-surface-darkCard rounded-2xl border border-slate-200/90 dark:border-slate-800/90 overflow-hidden shadow-xs hover:shadow-md hover:border-primary-400/80 dark:hover:border-primary-600/70 transition-all duration-200 flex flex-col justify-between">
-      {/* Video / Facade Container */}
-      <div className="relative aspect-video w-full bg-slate-900 flex items-center justify-center overflow-hidden">
+    <article
+      className={cn(
+        'group relative rounded-2xl transition-all duration-300 flex flex-col justify-between overflow-hidden',
+        'bg-white/90 dark:bg-[#0D0F17]/90 backdrop-blur-xl border',
+        'border-slate-200/80 dark:border-white/[0.08] hover:border-amber-500/40 dark:hover:border-amber-500/50',
+        'shadow-tactile hover:shadow-[0_0_30px_-10px_rgba(245,158,11,0.15)]'
+      )}
+    >
+      {/* Video Facade / Iframe */}
+      <div className="relative aspect-video w-full bg-slate-900 overflow-hidden flex items-center justify-center">
         {isPlaying ? (
           <iframe
             src={`https://www.youtube-nocookie.com/embed/${youtubeId}?autoplay=1&rel=0`}
@@ -46,7 +52,7 @@ export function VideoCard({
           <button
             onClick={() => setIsPlaying(true)}
             className="relative w-full h-full group/btn focus:outline-none cursor-pointer"
-            aria-label={`Play video: ${title}`}
+            aria-label={`Play video lesson: ${title}`}
           >
             <Image
               src={thumbnailUrl}
@@ -55,21 +61,20 @@ export function VideoCard({
               className="object-cover group-hover/btn:scale-105 transition-transform duration-500 ease-out"
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             />
-            {/* Dark gradient overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/20" />
 
-            {/* Play Button Icon with glowing pulse */}
+            {/* Glowing Play Trigger */}
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-14 h-14 rounded-full bg-red-600/90 group-hover/btn:bg-red-600 group-hover/btn:scale-110 text-white flex items-center justify-center shadow-lg shadow-red-950/50 transition-all duration-200">
-                <Play className="w-6 h-6 fill-current ml-0.5" />
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/90 group-hover/btn:bg-amber-400 group-hover/btn:scale-110 text-slate-950 flex items-center justify-center shadow-lg shadow-amber-950/60 transition-all duration-200">
+                <Play className="w-5 h-5 fill-current ml-0.5" />
               </div>
             </div>
 
-            {/* Badge overlay on thumbnail */}
+            {/* Facade Badge */}
             <div className="absolute top-3 left-3">
-              <span className="bg-black/70 backdrop-blur-md text-white text-[11px] font-semibold px-2.5 py-1 rounded-lg border border-white/10 flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                Video Lesson
+              <span className="bg-black/80 backdrop-blur-md text-white text-[10px] font-mono uppercase font-bold tracking-wider px-2.5 py-1 rounded-lg border border-white/10 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                Lecture
               </span>
             </div>
           </button>
@@ -79,32 +84,33 @@ export function VideoCard({
       {/* Content Meta */}
       <div className="p-5 flex-1 flex flex-col justify-between">
         <div>
-          <div className="flex items-center justify-between gap-2 mb-2.5">
+          {/* Monospaced Metadata Strip */}
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 mb-2.5 border-b border-slate-100 dark:border-white/[0.05] text-[11px] font-mono text-slate-400 dark:text-slate-500">
             <Link
               href={`/subject/${subjectSlug}`}
-              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-primary-50 text-primary-700 dark:bg-primary-950/70 dark:text-primary-300 border border-primary-100 dark:border-primary-900/60 hover:bg-primary-100 dark:hover:bg-primary-900/80 transition-colors"
+              className="inline-flex items-center gap-1.5 font-semibold text-amber-600 dark:text-amber-400 hover:text-amber-500 uppercase tracking-wider transition-colors"
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-primary-500" />
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
               {subjectName}
             </Link>
-            <span className="text-xs text-slate-400 flex items-center gap-1">
-              <Calendar className="w-3.5 h-3.5" />
+
+            <span className="flex items-center gap-1">
+              <Calendar className="w-3 h-3" />
               {formatDate(createdAt)}
             </span>
           </div>
 
-          <h3 className="font-heading font-bold text-ink dark:text-slate-100 text-base line-clamp-2 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors leading-snug">
+          <h3 className="font-heading font-bold text-slate-900 dark:text-slate-100 text-sm sm:text-base line-clamp-2 leading-snug group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
             {title}
           </h3>
 
           {description && (
-            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
+            <p className="mt-2 text-xs text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed">
               {description}
             </p>
           )}
         </div>
       </div>
-    </div>
+    </article>
   );
 }
-

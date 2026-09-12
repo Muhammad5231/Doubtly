@@ -59,6 +59,9 @@ model Question {
   @@index([status])
   @@index([createdAt])
   @@index([subjectId, status, createdAt])
+  @@index([subjectId, createdAt(sort: Desc)])
+  @@index([status, views(sort: Desc)])
+  @@index([status, createdAt(sort: Desc)])
   @@map("questions")
 }
 
@@ -82,6 +85,8 @@ model Note {
   @@index([subjectId])
   @@index([status])
   @@index([createdAt])
+  @@index([subjectId, createdAt(sort: Desc)])
+  @@index([status, createdAt(sort: Desc)])
   @@map("notes")
 }
 
