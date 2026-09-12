@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Save, Loader2, AlertCircle, Eye } from 'lucide-react';
-import { slugify } from '@/lib/utils';
+import { ArrowLeft, Save, Loader2, AlertCircle, Eye, Sparkles, Globe, CheckCircle2, RefreshCw } from 'lucide-react';
+import { generateSeoSlug, generateMetaDescription } from '@/lib/seo';
+import { StemRenderer } from '@/components/StemRenderer';
 
 interface SubjectOption {
   id: string;
@@ -44,11 +45,25 @@ export function QuestionForm({ initialData, subjects }: QuestionFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const currentSubject = useMemo(
+    () => subjects.find((s) => s.id === subjectId),
+    [subjects, subjectId]
+  );
+
+  const autoMetaDescription = useMemo(
+    () => generateMetaDescription(title, answer),
+    [title, answer]
+  );
+
   const handleTitleChange = (val: string) => {
     setTitle(val);
     if (!isEditing || !slug) {
-      setSlug(slugify(val));
+      setSlug(generateSeoSlug(val, currentSubject?.name));
     }
+  };
+
+  const handleRegenerateSlug = () => {
+    setSlug(generateSeoSlug(title, currentSubject?.name));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -98,24 +113,24 @@ export function QuestionForm({ initialData, subjects }: QuestionFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8 max-w-4xl">
+    <form onSubmit={handleSubmit} className="space-y-8 max-w-4xl font-sans">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link
             href="/admin/questions"
-            className="p-2 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="p-2 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
           </Link>
-          <h1 className="text-2xl font-heading font-bold text-ink dark:text-white">
-            {isEditing ? 'Edit Question' : 'Create New Question'}
+          <h1 className="text-2xl font-heading font-bold text-slate-900 dark:text-white">
+            {isEditing ? 'Edit Academic Question' : 'Author Solved Question'}
           </h1>
         </div>
 
         <button
           type="submit"
           disabled={loading}
-          className="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white font-semibold text-sm px-5 py-2.5 rounded-xl shadow-sm transition-all disabled:opacity-50"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm shadow-sm transition-all disabled:opacity-50"
         >
           {loading ? (
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -134,7 +149,7 @@ export function QuestionForm({ initialData, subjects }: QuestionFormProps) {
       )}
 
       {/* Main Form Fields */}
-      <div className="bg-white dark:bg-surface-darkCard rounded-2xl border border-slate-200 dark:border-slate-800 p-6 sm:p-8 space-y-6 shadow-sm">
+      <div className="bg-white dark:bg-[#0D0F17] rounded-2xl border border-slate-200/80 dark:border-white/[0.08] p-6 sm:p-8 space-y-6 shadow-tactile">
         {/* Title */}
         <div>
           <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-2">
@@ -146,22 +161,31 @@ export function QuestionForm({ initialData, subjects }: QuestionFormProps) {
             value={title}
             onChange={(e) => handleTitleChange(e.target.value)}
             placeholder="e.g. How do you find the derivative of sin(x^2) using the chain rule?"
-            className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-ink dark:text-white text-base focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-base focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
 
         {/* Slug and Subject */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-2">
-              URL Slug
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                URL Slug
+              </label>
+              <button
+                type="button"
+                onClick={handleRegenerateSlug}
+                className="inline-flex items-center gap-1 text-[11px] font-mono text-indigo-600 dark:text-indigo-400 hover:underline"
+              >
+                <RefreshCw className="w-3 h-3" /> Auto-Generate
+              </button>
+            </div>
             <input
               type="text"
               value={slug}
-              onChange={(e) => setSlug(slugify(e.target.value))}
+              onChange={(e) => setSlug(e.target.value)}
               placeholder="auto-generated-from-title"
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm font-mono text-ink dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
 
@@ -173,7 +197,7 @@ export function QuestionForm({ initialData, subjects }: QuestionFormProps) {
               value={subjectId}
               onChange={(e) => setSubjectId(e.target.value)}
               required
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-ink dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               {subjects.map((s) => (
                 <option key={s.id} value={s.id}>
@@ -184,54 +208,48 @@ export function QuestionForm({ initialData, subjects }: QuestionFormProps) {
           </div>
         </div>
 
-        {/* Question Body (Rich Text / HTML / Markdown) */}
+        {/* Problem Statement Body */}
         <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">
-              Question Context & Formula Details (HTML/Text) *
-            </label>
-            <span className="text-[11px] text-slate-400">
-              Sanitized with DOMPurify on save
-            </span>
-          </div>
+          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-2">
+            Problem Context / Given Statement
+          </label>
           <textarea
-            required
             rows={4}
             value={body}
             onChange={(e) => setBody(e.target.value)}
-            placeholder="Provide context, formulas, given parameters, or problem statement..."
-            className="w-full p-4 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm font-sans focus:outline-none focus:ring-2 focus:ring-primary-500"
+            placeholder="Detailed statement or context. Supports LaTeX math ($E=mc^2$) and chemistry..."
+            className="w-full p-4 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
 
-        {/* Answer Solution (Rich Text / HTML / Markdown) */}
+        {/* Verified Solution (Answer) with STEM preview */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">
-              Step-by-Step Answer / Solution *
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+              Verified Step-by-Step Solution *
             </label>
-            <div className="flex gap-2 text-xs">
+            <div className="flex rounded-lg border border-slate-200 dark:border-slate-700 p-0.5 bg-slate-100 dark:bg-slate-800 text-xs">
               <button
                 type="button"
                 onClick={() => setPreviewTab('edit')}
-                className={`px-2.5 py-1 rounded-lg ${
+                className={`px-3 py-1 rounded-md transition-colors ${
                   previewTab === 'edit'
-                    ? 'bg-primary-100 text-primary-800 font-semibold'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-semibold shadow-xs'
                     : 'text-slate-500'
                 }`}
               >
-                Editor
+                Write LaTeX
               </button>
               <button
                 type="button"
                 onClick={() => setPreviewTab('preview')}
-                className={`px-2.5 py-1 rounded-lg flex items-center gap-1 ${
+                className={`px-3 py-1 rounded-md flex items-center gap-1 transition-colors ${
                   previewTab === 'preview'
-                    ? 'bg-primary-100 text-primary-800 font-semibold'
+                    ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-200 font-semibold'
                     : 'text-slate-500'
                 }`}
               >
-                <Eye className="w-3.5 h-3.5" /> Preview
+                <Eye className="w-3.5 h-3.5" /> STEM Preview
               </button>
             </div>
           </div>
@@ -239,20 +257,20 @@ export function QuestionForm({ initialData, subjects }: QuestionFormProps) {
           {previewTab === 'edit' ? (
             <textarea
               required
-              rows={10}
+              rows={12}
               value={answer}
               onChange={(e) => setAnswer(e.target.value)}
-              placeholder="Write the full solution here. HTML tags like <p>, <h3>, <ul>, <pre>, <code> are supported..."
-              className="w-full p-4 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary-500"
+              placeholder="Write full derivation. Supports:&#10;• Inline Math: $x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}$&#10;• Display Math: $$\int_a^b f(x)dx$$&#10;• Chemistry: $\ce{H2 + Cl2 -> 2HCl}$&#10;• Step badges: Step 1: Given parameters..."
+              className="w-full p-4 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           ) : (
-            <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 min-h-[200px] prose-content bg-slate-50/50 dark:bg-slate-900/50">
-              <div dangerouslySetInnerHTML={{ __html: answer }} />
+            <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-800 min-h-[220px] bg-slate-50/50 dark:bg-slate-900/50">
+              <StemRenderer content={answer || '*No solution written yet.*'} />
             </div>
           )}
         </div>
 
-        {/* Tags & Status */}
+        {/* Topic Tags & Status */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-2">
@@ -263,7 +281,7 @@ export function QuestionForm({ initialData, subjects }: QuestionFormProps) {
               value={tagsStr}
               onChange={(e) => setTagsStr(e.target.value)}
               placeholder="calculus, chain-rule, differentiation"
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
 
@@ -274,15 +292,35 @@ export function QuestionForm({ initialData, subjects }: QuestionFormProps) {
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value as any)}
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               <option value="PUBLISHED">Published (Visible to students)</option>
               <option value="DRAFT">Draft (Admin eyes only)</option>
             </select>
           </div>
         </div>
+
+        {/* SEO / GEO Automation Card */}
+        <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/[0.03] p-4 sm:p-5 space-y-3">
+          <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+            <Globe className="w-3.5 h-3.5" />
+            <span>SEO & Generative Engine Optimization (GEO) Preview</span>
+          </div>
+          <div className="space-y-1.5 text-xs">
+            <div className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+              <span className="text-slate-400 font-mono">Meta Title:</span>
+              <span>{title ? `${title} | Doubtly Solution` : 'Untitled Question'}</span>
+            </div>
+            <div className="text-slate-600 dark:text-slate-400 flex items-start gap-2">
+              <span className="text-slate-400 font-mono flex-shrink-0">Meta Desc:</span>
+              <span className="italic">{autoMetaDescription || 'Awaiting question content...'}</span>
+            </div>
+            <div className="text-slate-500 font-mono text-[11px] pt-1">
+              Length: {autoMetaDescription.length} / 160 chars • OpenGraph type: article • Schema: QAPage
+            </div>
+          </div>
+        </div>
       </div>
     </form>
   );
 }
-

@@ -6,11 +6,11 @@ import { searchContent } from '@/lib/search/rank';
 import { SearchBox } from '@/components/SearchBox';
 import { QuestionCard } from '@/components/QuestionCard';
 import { NoteCard } from '@/components/NoteCard';
+import { SearchFacetBar, SubjectItem } from '@/components/SearchFacetBar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   Search,
-  Filter,
   BookOpen,
   ChevronLeft,
   ChevronRight,
@@ -18,17 +18,11 @@ import {
   RotateCcw,
   HelpCircle,
   FileText,
-  SlidersHorizontal,
   Layers,
-  Calculator,
-  Atom,
-  FlaskConical,
-  Binary,
-  Dna,
-  GraduationCap,
+  X,
 } from 'lucide-react';
 
-// Thin content: enforce noindex per prompt requirements
+// Thin content: enforce noindex per SEO requirements
 export const metadata: Metadata = {
   title: 'Search Doubts & Notes',
   robots: {
@@ -41,52 +35,45 @@ interface SearchPageProps {
   searchParams: {
     q?: string;
     subject?: string;
+    format?: 'all' | 'questions' | 'notes';
     type?: 'all' | 'questions' | 'notes';
-    sort?: 'relevance' | 'newest' | 'views';
+    sort?: 'relevance' | 'newest' | 'views' | 'helpful';
+    hasMath?: string;
+    verified?: string;
+    difficulty?: string;
     page?: string;
   };
-}
-
-function getSubjectIcon(name: string) {
-  const lower = name.toLowerCase();
-  if (lower.includes('math') || lower.includes('calculus') || lower.includes('algebra')) {
-    return <Calculator className="w-3.5 h-3.5" />;
-  }
-  if (lower.includes('physic')) {
-    return <Atom className="w-3.5 h-3.5" />;
-  }
-  if (lower.includes('chem')) {
-    return <FlaskConical className="w-3.5 h-3.5" />;
-  }
-  if (lower.includes('comput') || lower.includes('code') || lower.includes('program')) {
-    return <Binary className="w-3.5 h-3.5" />;
-  }
-  if (lower.includes('bio')) {
-    return <Dna className="w-3.5 h-3.5" />;
-  }
-  return <GraduationCap className="w-3.5 h-3.5" />;
 }
 
 export default async function SearchPage({ searchParams }: SearchPageProps) {
   const query = searchParams.q || '';
   const subjectSlug = searchParams.subject;
-  const type = searchParams.type || 'all';
+  const type = (searchParams.format || searchParams.type || 'all') as 'all' | 'questions' | 'notes';
   const sort = searchParams.sort || 'relevance';
+  const hasMath = searchParams.hasMath === 'true';
+  const verifiedOnly = searchParams.verified === 'true';
+  const difficulty = searchParams.difficulty;
   const page = Math.max(1, parseInt(searchParams.page || '1', 10));
   const limit = 10;
 
-  const [searchResults, subjects, totalQuestionCount, totalNoteCount] = await Promise.all([
+  const [searchResults, rawSubjects, totalQuestionCount, totalNoteCount] = await Promise.all([
     searchContent({
       query,
       subjectSlug,
       type,
       sort,
+      hasMath,
+      verifiedOnly,
+      difficulty,
       page,
       limit,
     }),
     db.subject.findMany({
       orderBy: { order: 'asc' },
-      include: {
+      select: {
+        id: true,
+        name: true,
+        slug: true,
         _count: {
           select: {
             questions: { where: { status: 'PUBLISHED' } },
@@ -99,285 +86,108 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     db.note.count({ where: { status: 'PUBLISHED' } }),
   ]);
 
+  const subjects: SubjectItem[] = rawSubjects.map((s) => ({
+    id: s.id,
+    name: s.name,
+    slug: s.slug,
+    questionCount: s._count.questions,
+    noteCount: s._count.notes,
+  }));
+
   const { items, total, totalPages } = searchResults;
-  const hasActiveFilters = Boolean(query || subjectSlug || type !== 'all' || sort !== 'relevance');
 
-  // Helper to build filter query string
-  const createFilterUrl = (overrides: Record<string, string | undefined>) => {
-    const params = new URLSearchParams();
-    if (query) params.set('q', query);
-    if (subjectSlug) params.set('subject', subjectSlug);
-    if (type !== 'all') params.set('type', type);
-    if (sort !== 'relevance') params.set('sort', sort);
-    if (page > 1) params.set('page', String(page));
-
-    Object.entries(overrides).forEach(([key, val]) => {
-      if (val === undefined || val === '') {
-        params.delete(key);
-      } else {
-        params.set(key, val);
-      }
-    });
-
-    return `/search?${params.toString()}`;
-  };
-
+  // Active Filter Helper
   const currentSubject = subjects.find((s) => s.slug === subjectSlug);
 
   return (
-    <div className="min-h-screen pb-16">
+    <div className="min-h-screen pb-20 font-sans">
       {/* Top Search Command Header */}
-      <section className="relative overflow-hidden pt-8 pb-10 border-b border-slate-200/80 dark:border-slate-800/80 bg-gradient-to-b from-primary-50/40 via-background to-background dark:from-surface-darkCard/25">
-        <div className="absolute inset-0 bg-grid-slate pointer-events-none opacity-40 [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_80%)]" />
-        
+      <section className="relative overflow-hidden pt-8 pb-10 border-b border-slate-200/80 dark:border-white/[0.06] bg-gradient-to-b from-slate-50 via-white to-white dark:from-[#0E111A] dark:via-[#090A0F] dark:to-[#090A0F]">
         <div className="container mx-auto px-4 max-w-5xl relative z-10">
-          <div className="max-w-3xl mx-auto mb-6">
+          <div className="max-w-3xl mx-auto mb-4">
             <SearchBox initialValue={query} large autoFocus={!query} />
           </div>
 
-          {/* Quick Active Filter Pills */}
-          <div className="flex flex-wrap items-center justify-center gap-2 text-xs">
-            <Link
-              href={createFilterUrl({ type: 'all', page: '1' })}
-              className={`px-3.5 py-1.5 rounded-full font-semibold transition-all ${
-                type === 'all'
-                  ? 'bg-primary-600 text-white shadow-xs'
-                  : 'bg-white dark:bg-surface-darkCard text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:border-primary-400'
-              }`}
-            >
-              All Content ({totalQuestionCount + totalNoteCount})
-            </Link>
-
-            <Link
-              href={createFilterUrl({ type: 'questions', page: '1' })}
-              className={`px-3.5 py-1.5 rounded-full font-semibold transition-all ${
-                type === 'questions'
-                  ? 'bg-primary-600 text-white shadow-xs'
-                  : 'bg-white dark:bg-surface-darkCard text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:border-primary-400'
-              }`}
-            >
-              Questions & Solutions ({totalQuestionCount})
-            </Link>
-
-            <Link
-              href={createFilterUrl({ type: 'notes', page: '1' })}
-              className={`px-3.5 py-1.5 rounded-full font-semibold transition-all ${
-                type === 'notes'
-                  ? 'bg-secondary-600 text-white shadow-xs'
-                  : 'bg-white dark:bg-surface-darkCard text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:border-secondary-400'
-              }`}
-            >
-              Study Notes ({totalNoteCount})
-            </Link>
-          </div>
+          {/* Quick Active Filter Badges */}
+          {(subjectSlug || hasMath || verifiedOnly || difficulty || (type && type !== 'all')) && (
+            <div className="flex flex-wrap items-center justify-center gap-2 pt-2 text-xs">
+              <span className="text-slate-400 font-mono text-[11px]">Active:</span>
+              {currentSubject && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 text-[11px] font-mono">
+                  {currentSubject.name}
+                  <Link href={`/search?q=${encodeURIComponent(query)}`}>
+                    <X className="w-3 h-3 hover:text-indigo-700" />
+                  </Link>
+                </span>
+              )}
+              {hasMath && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30 text-[11px] font-mono">
+                  LaTeX Math
+                </span>
+              )}
+              {verifiedOnly && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-[11px] font-mono">
+                  Peer-Verified
+                </span>
+              )}
+              {difficulty && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/30 text-[11px] font-mono capitalize">
+                  {difficulty}
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </section>
 
-      {/* Main Grid: Filters & Results */}
+      {/* Main Two-Column Layout */}
       <div className="container mx-auto px-4 pt-8 max-w-6xl">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Sidebar Filters */}
-          <aside className="lg:col-span-1 space-y-6">
-            <div className="bg-white/90 dark:bg-slate-900/80 backdrop-blur-xl p-5 rounded-2xl border border-slate-200/90 dark:border-slate-800/90 shadow-xs space-y-6">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800/80">
-                <div className="flex items-center gap-2">
-                  <SlidersHorizontal className="w-4 h-4 text-primary-600 dark:text-primary-400" />
-                  <h3 className="font-heading font-bold text-sm text-ink dark:text-white">
-                    Filter Results
-                  </h3>
-                </div>
-
-                {hasActiveFilters && (
-                  <Link
-                    href="/search"
-                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-500 hover:text-rose-600 transition-colors"
-                    title="Clear all filters"
-                  >
-                    <RotateCcw className="w-3 h-3" />
-                    Reset
-                  </Link>
-                )}
-              </div>
-
-              {/* Type filter */}
-              <div>
-                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2.5 block">
-                  Content Type
-                </label>
-                <div className="space-y-1">
-                  {[
-                    { label: 'All Content', value: 'all', count: totalQuestionCount + totalNoteCount },
-                    { label: 'Questions & Solutions', value: 'questions', count: totalQuestionCount },
-                    { label: 'Notes & PDFs', value: 'notes', count: totalNoteCount },
-                  ].map((item) => {
-                    const isSelected = type === item.value;
-                    return (
-                      <Link
-                        key={item.value}
-                        href={createFilterUrl({ type: item.value, page: '1' })}
-                        className={`flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-xl transition-all ${
-                          isSelected
-                            ? 'bg-primary-50 dark:bg-primary-950/70 text-primary-700 dark:text-primary-300 border border-primary-200/80 dark:border-primary-800/60 shadow-2xs'
-                            : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50'
-                        }`}
-                      >
-                        <span>{item.label}</span>
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono ${
-                          isSelected
-                            ? 'bg-primary-200/60 dark:bg-primary-900/60 text-primary-800 dark:text-primary-200'
-                            : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
-                        }`}>
-                          {item.count}
-                        </span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Subject filter */}
-              <div>
-                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2.5 block">
-                  Academic Subject
-                </label>
-                <div className="space-y-1 max-h-64 overflow-y-auto pr-1">
-                  <Link
-                    href={createFilterUrl({ subject: undefined, page: '1' })}
-                    className={`flex items-center justify-between px-3 py-1.5 text-xs font-semibold rounded-xl transition-all ${
-                      !subjectSlug
-                        ? 'bg-primary-50 dark:bg-primary-950/70 text-primary-700 dark:text-primary-300 border border-primary-200/80 dark:border-primary-800/60 shadow-2xs'
-                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50'
-                    }`}
-                  >
-                    <span>All Subjects</span>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-slate-100 dark:bg-slate-800 text-slate-400">
-                      {totalQuestionCount + totalNoteCount}
-                    </span>
-                  </Link>
-
-                  {subjects.map((sub) => {
-                    const isSelected = subjectSlug === sub.slug;
-                    const subTotal = sub._count.questions + sub._count.notes;
-                    return (
-                      <Link
-                        key={sub.id}
-                        href={createFilterUrl({ subject: sub.slug, page: '1' })}
-                        className={`flex items-center justify-between px-3 py-1.5 text-xs font-semibold rounded-xl transition-all ${
-                          isSelected
-                            ? 'bg-primary-50 dark:bg-primary-950/70 text-primary-700 dark:text-primary-300 border border-primary-200/80 dark:border-primary-800/60 shadow-2xs'
-                            : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className={isSelected ? 'text-primary-600 dark:text-primary-400' : 'text-slate-400'}>
-                            {getSubjectIcon(sub.name)}
-                          </span>
-                          <span className="truncate">{sub.name}</span>
-                        </div>
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono ${
-                          isSelected
-                            ? 'bg-primary-200/60 dark:bg-primary-900/60 text-primary-800 dark:text-primary-200'
-                            : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
-                        }`}>
-                          {subTotal}
-                        </span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Sort order */}
-              <div>
-                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2.5 block">
-                  Sort Order
-                </label>
-                <div className="space-y-1">
-                  {[
-                    { label: 'Relevance (Blended)', value: 'relevance' },
-                    { label: 'Newest Added', value: 'newest' },
-                    { label: 'Most Viewed', value: 'views' },
-                  ].map((item) => {
-                    const isSelected = sort === item.value;
-                    return (
-                      <Link
-                        key={item.value}
-                        href={createFilterUrl({ sort: item.value, page: '1' })}
-                        className={`flex items-center justify-between px-3 py-1.5 text-xs font-semibold rounded-xl transition-all ${
-                          isSelected
-                            ? 'bg-primary-50 dark:bg-primary-950/70 text-primary-700 dark:text-primary-300 border border-primary-200/80 dark:border-primary-800/60 shadow-2xs'
-                            : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50'
-                        }`}
-                      >
-                        <span>{item.label}</span>
-                        {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-primary-500" />}
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </aside>
-
-        {/* Main Search Results Area */}
-        <main className="lg:col-span-3 space-y-6">
-          {/* Header summary */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl sm:text-2xl font-heading font-bold text-ink dark:text-white">
-                {query ? (
-                  <>
-                    Results for &ldquo;<span className="text-primary-600">{query}</span>&rdquo;
-                  </>
-                ) : (
-                  'Browse All Doubts & Notes'
-                )}
-              </h1>
-              <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                Found {total.toLocaleString()} matched results {query && '(ranked by weighted relevance & trigram similarity)'}
-              </p>
-            </div>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* Left Column: Faceted Filter Bar (Desktop sticky + mobile drawer) */}
+          <div className="lg:col-span-4">
+            <SearchFacetBar subjects={subjects} totalResults={total} />
           </div>
 
-          {/* Results list */}
-          {items.length === 0 ? (
-            <div className="bg-white dark:bg-surface-darkCard rounded-2xl border border-slate-200 dark:border-slate-800 p-12 text-center">
-              <div className="w-14 h-14 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 mx-auto flex items-center justify-center mb-4">
-                <Search className="w-7 h-7" />
+          {/* Right Column: Results Stream */}
+          <div className="lg:col-span-8 space-y-6">
+            {/* Header: Results count and status */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-200/80 dark:border-white/[0.06] text-xs font-mono text-slate-500">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-slate-900 dark:text-white">
+                  {total} {total === 1 ? 'Result' : 'Results'} Found
+                </span>
+                {query && (
+                  <span>
+                    for &ldquo;<span className="text-indigo-500 font-bold">{query}</span>&rdquo;
+                  </span>
+                )}
               </div>
-              <h2 className="text-lg font-heading font-bold text-ink dark:text-white mb-2">
-                No matching results found
-              </h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-6">
-                We couldn&apos;t find anything matching &ldquo;{query}&rdquo;. Try checking for typos, searching broader keywords, or exploring our subject categories.
-              </p>
-              <Link
-                href="/search"
-                className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold rounded-xl bg-primary-600 text-white hover:bg-primary-700"
-              >
-                Clear all filters
-              </Link>
+              <div>
+                Page {page} of {Math.max(1, totalPages)}
+              </div>
             </div>
-          ) : (
-            <div className="space-y-4">
-              {items.map((item) => {
-                if (item.type === 'question') {
-                  return (
-                    <QuestionCard
-                      key={item.id}
-                      id={item.id}
-                      title={item.title}
-                      slug={item.slug}
-                      snippet={item.snippet}
-                      highlightedSnippet={item.snippet}
-                      subjectName={item.subjectName}
-                      subjectSlug={item.subjectSlug}
-                      views={item.views}
-                      tags={item.tags}
-                      createdAt={item.createdAt}
-                    />
-                  );
-                } else {
+
+            {/* Results Stream */}
+            {items.length > 0 ? (
+              <div className="space-y-4">
+                {items.map((item) => {
+                  if (item.type === 'question') {
+                    return (
+                      <QuestionCard
+                        key={item.id}
+                        id={item.id}
+                        title={item.title}
+                        slug={item.slug}
+                        snippet={item.snippet}
+                        subjectName={item.subjectName}
+                        subjectSlug={item.subjectSlug}
+                        views={item.views}
+                        tags={item.tags}
+                        createdAt={item.createdAt}
+                        highlightedSnippet={item.snippet}
+                      />
+                    );
+                  }
                   return (
                     <NoteCard
                       key={item.id}
@@ -388,47 +198,74 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                       subjectName={item.subjectName}
                       subjectSlug={item.subjectSlug}
                       fileUrl={item.fileUrl || '#'}
-                      fileType={item.fileType}
-                      fileSize={item.fileSize}
+                      fileType={item.fileType || 'PDF'}
+                      fileSize={item.fileSize || 0}
                       tags={item.tags}
                       createdAt={item.createdAt}
                     />
                   );
-                }
-              })}
-            </div>
-          )}
+                })}
+              </div>
+            ) : (
+              <div className="py-16 px-6 text-center rounded-2xl bg-white dark:bg-[#0D0F17] border border-slate-200/80 dark:border-white/[0.08] shadow-tactile space-y-4">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center mx-auto border border-indigo-500/20">
+                  <Search className="w-6 h-6" />
+                </div>
+                <h3 className="text-lg font-heading font-bold text-slate-900 dark:text-white">
+                  No matching academic doubts found
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
+                  Try broadening your search terms, removing active subject filters, or exploring our subject taxonomies.
+                </p>
+                <div className="pt-2">
+                  <Link
+                    href="/search"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-sm transition-all"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    Reset All Filters
+                  </Link>
+                </div>
+              </div>
+            )}
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="pt-6 flex items-center justify-center gap-2">
-              {page > 1 && (
-                <Link
-                  href={createFilterUrl({ page: String(page - 1) })}
-                  className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-800 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-1"
-                >
-                  <ChevronLeft className="w-4 h-4" /> Previous
-                </Link>
-              )}
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="pt-6 flex items-center justify-between border-t border-slate-200/80 dark:border-white/[0.06] text-xs font-mono">
+                {page > 1 ? (
+                  <Link
+                    href={`/search?q=${encodeURIComponent(query)}&page=${page - 1}${
+                      subjectSlug ? `&subject=${subjectSlug}` : ''
+                    }`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 hover:border-indigo-500 text-slate-700 dark:text-slate-300 transition-colors"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" /> Previous
+                  </Link>
+                ) : (
+                  <div />
+                )}
 
-              <span className="text-xs text-slate-500 px-3">
-                Page {page} of {totalPages}
-              </span>
+                <span className="text-slate-400">
+                  {page} / {totalPages}
+                </span>
 
-              {page < totalPages && (
-                <Link
-                  href={createFilterUrl({ page: String(page + 1) })}
-                  className="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-800 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-1"
-                >
-                  Next <ChevronRight className="w-4 h-4" />
-                </Link>
-              )}
-            </div>
-          )}
-        </main>
+                {page < totalPages ? (
+                  <Link
+                    href={`/search?q=${encodeURIComponent(query)}&page=${page + 1}${
+                      subjectSlug ? `&subject=${subjectSlug}` : ''
+                    }`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 hover:border-indigo-500 text-slate-700 dark:text-slate-300 transition-colors"
+                  >
+                    Next <ChevronRight className="w-3.5 h-3.5" />
+                  </Link>
+                ) : (
+                  <div />
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
-    </div>
     </div>
   );
 }
-

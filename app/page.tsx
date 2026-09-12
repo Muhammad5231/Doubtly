@@ -5,6 +5,7 @@ import { SearchBox } from '@/components/SearchBox';
 import { QuestionCard } from '@/components/QuestionCard';
 import { NoteCard } from '@/components/NoteCard';
 import { VideoCard } from '@/components/VideoCard';
+import { StemRenderer } from '@/components/StemRenderer';
 import {
   Sparkles,
   BookOpen,
@@ -24,6 +25,8 @@ import {
   Dna,
   Layers,
   Flame,
+  Search,
+  ExternalLink,
 } from 'lucide-react';
 
 export const revalidate = 300; // 5-minute ISR window
@@ -49,6 +52,14 @@ function getSubjectIcon(name: string) {
   return <GraduationCap className="w-5 h-5 text-indigo-500" />;
 }
 
+const TRENDING_CHIPS = [
+  'Chain Rule Derivation',
+  'Schrödinger Wave Equation',
+  'Le Chatelier Equilibrium',
+  'Integration by Parts',
+  'Binary Search Trees',
+];
+
 export default async function HomePage() {
   let subjects: any[] = [];
   let trendingQuestions: any[] = [];
@@ -57,7 +68,6 @@ export default async function HomePage() {
 
   try {
     const [subs, tQs, lNotes, fVids] = await Promise.all([
-      // Pruned query: Subjects with counts
       db.subject.findMany({
         orderBy: { order: 'asc' },
         select: {
@@ -76,7 +86,6 @@ export default async function HomePage() {
         take: 8,
       }),
 
-      // Pruned query: Top trending questions
       db.question.findMany({
         where: { status: 'PUBLISHED' },
         select: {
@@ -84,6 +93,7 @@ export default async function HomePage() {
           title: true,
           slug: true,
           body: true,
+          answer: true,
           views: true,
           tags: true,
           createdAt: true,
@@ -94,7 +104,6 @@ export default async function HomePage() {
         take: 6,
       }),
 
-      // Pruned query: Recent high-yield notes
       db.note.findMany({
         where: { status: 'PUBLISHED' },
         select: {
@@ -110,10 +119,9 @@ export default async function HomePage() {
           subject: { select: { name: true, slug: true } },
         },
         orderBy: { createdAt: 'desc' },
-        take: 4,
+        take: 3,
       }),
 
-      // Pruned query: Featured video lectures
       db.video.findMany({
         where: { status: 'PUBLISHED' },
         select: {
@@ -137,8 +145,12 @@ export default async function HomePage() {
     console.error('Database query fallback:', error);
   }
 
+  // Top spotlight question for Tile 1 formula preview
+  const spotlightQuestion = trendingQuestions[0];
+  const spotlightFormula = spotlightQuestion?.answer?.match(/\$\$([^$]+)\$\$/)?.[0] || '$$\\int_0^\\infty e^{-x^2} dx = \\frac{\\sqrt{\\pi}}{2}$$';
+
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-[#090A0F] text-slate-900 dark:text-slate-100 transition-colors">
+    <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-[#090A0F] text-slate-900 dark:text-slate-100 transition-colors font-sans">
       {/* Hero: Obsidian Command Terminal Experience */}
       <section className="relative overflow-hidden pt-16 pb-20 md:pt-24 md:pb-28 border-b border-slate-200/80 dark:border-white/[0.06]">
         {/* Subtle Ambient Radial Shaders */}
@@ -173,152 +185,247 @@ export default async function HomePage() {
           </p>
 
           {/* Floating Command Bar */}
-          <div className="max-w-2xl mx-auto mb-6">
+          <div className="max-w-2xl mx-auto mb-5">
             <SearchBox large autoFocus />
           </div>
 
-          {/* Quick-Filter Pills with Micro-Animations */}
+          {/* Live Trending Query Chips */}
           <div className="flex flex-wrap items-center justify-center gap-2 text-xs">
-            <Link
-              href="/search?type=questions"
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-semibold transition-all bg-white dark:bg-white/[0.04] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/[0.08] hover:border-indigo-500/50 hover:text-indigo-600 dark:hover:text-indigo-400 hover:shadow-xs hover:scale-102"
-            >
-              <CheckCircle2 className="w-3.5 h-3.5 text-amber-500" />
-              Verified Solutions
-            </Link>
-
-            <Link
-              href="/notes"
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-semibold transition-all bg-white dark:bg-white/[0.04] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/[0.08] hover:border-cyan-500/50 hover:text-cyan-600 dark:hover:text-cyan-400 hover:shadow-xs hover:scale-102"
-            >
-              <FileText className="w-3.5 h-3.5 text-cyan-500" />
-              Lecture Notes
-            </Link>
-
-            <Link
-              href="/videos"
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-semibold transition-all bg-white dark:bg-white/[0.04] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/[0.08] hover:border-amber-500/50 hover:text-amber-600 dark:hover:text-amber-400 hover:shadow-xs hover:scale-102"
-            >
-              <Video className="w-3.5 h-3.5 text-amber-500" />
-              Video Breakdowns
-            </Link>
-
-            <Link
-              href="/search?q=exam"
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-semibold transition-all bg-white dark:bg-white/[0.04] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/[0.08] hover:border-indigo-500/50 hover:text-indigo-600 dark:hover:text-indigo-400 hover:shadow-xs hover:scale-102"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-              Past Exam Questions
-            </Link>
+            <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500 mr-1 flex items-center gap-1">
+              <TrendingUp className="w-3 h-3 text-indigo-500" /> Trending:
+            </span>
+            {TRENDING_CHIPS.map((chip) => (
+              <Link
+                key={chip}
+                href={`/search?q=${encodeURIComponent(chip)}`}
+                className="px-3 py-1 rounded-full text-xs font-medium bg-white/80 dark:bg-white/[0.03] text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-white/[0.08] hover:border-indigo-500/50 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all hover:scale-102"
+              >
+                {chip}
+              </Link>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Proof Points Strip */}
-      <section className="border-b border-slate-200/80 dark:border-white/[0.06] bg-white/50 dark:bg-white/[0.01] py-6">
+      {/* Middle: Bento Grid Discovery Architecture */}
+      <section className="py-16 border-b border-slate-200/80 dark:border-white/[0.06]">
         <div className="container mx-auto px-4 max-w-6xl">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-            <div className="space-y-1">
-              <div className="font-heading font-extrabold text-2xl sm:text-3xl text-slate-900 dark:text-white">
-                100% Free
-              </div>
-              <p className="text-xs text-slate-500 font-medium">No paywalls or student credits</p>
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <span className="font-mono text-xs uppercase tracking-wider text-indigo-500 font-bold flex items-center gap-1.5 mb-1">
+                <Layers className="w-3.5 h-3.5" /> Bento Hub
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-heading font-extrabold text-slate-900 dark:text-white">
+                Academic Discovery Portal
+              </h2>
             </div>
-            <div className="space-y-1">
-              <div className="font-heading font-extrabold text-2xl sm:text-3xl text-indigo-600 dark:text-indigo-400">
-                Zero Login
+            <Link
+              href="/search"
+              className="text-xs font-mono font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+            >
+              Browse All &rarr;
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Tile 1 (Large 7-Cols): Trending Formulas & Problem Breakdowns with live LaTeX */}
+            <div className="lg:col-span-7 rounded-3xl p-6 sm:p-8 bg-gradient-to-br from-white via-white to-slate-50 dark:from-[#0D0F17] dark:via-[#0D0F17] dark:to-[#07090F] border border-slate-200/80 dark:border-white/[0.08] shadow-tactile flex flex-col justify-between relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none -z-0" />
+              
+              <div className="relative z-10 space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold uppercase tracking-wider bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30">
+                    <Flame className="w-3.5 h-3.5" /> Tile 1 • Trending STEM Breakdown
+                  </span>
+                  <span className="text-xs font-mono text-slate-400">
+                    {spotlightQuestion?.views || 1200}+ views
+                  </span>
+                </div>
+
+                <Link
+                  href={spotlightQuestion ? `/q/${spotlightQuestion.slug}` : '/search'}
+                  className="block group-hover:text-indigo-500 transition-colors"
+                >
+                  <h3 className="text-xl sm:text-2xl font-heading font-bold text-slate-900 dark:text-white tracking-tight leading-snug">
+                    {spotlightQuestion?.title || 'Gaussian Integral & Multivariable Probability Distribution'}
+                  </h3>
+                </Link>
+
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed">
+                  {spotlightQuestion?.body?.slice(0, 160) ||
+                    'Step-by-step verified integration across infinite bounds using Cartesian to Polar coordinates.'}
+                </p>
+
+                {/* Live LaTeX Formula Preview */}
+                <div className="p-4 rounded-2xl bg-slate-100/80 dark:bg-black/40 border border-slate-200/60 dark:border-white/10 overflow-x-auto">
+                  <StemRenderer content={spotlightFormula} compact />
+                </div>
               </div>
-              <p className="text-xs text-slate-500 font-medium">Instant anonymous browsing</p>
+
+              <div className="relative z-10 mt-6 pt-4 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-mono text-slate-500">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                  <span>Verified Derivation Available</span>
+                </div>
+                <Link
+                  href={spotlightQuestion ? `/q/${spotlightQuestion.slug}` : '/search'}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-sm transition-all"
+                >
+                  <span>Inspect Derivation</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
             </div>
-            <div className="space-y-1">
-              <div className="font-heading font-extrabold text-2xl sm:text-3xl text-amber-500">
-                Peer-Verified
+
+            {/* Tile 2 (5-Cols): Quick Subject Portals with glowing neon badges */}
+            <div className="lg:col-span-5 rounded-3xl p-6 sm:p-7 bg-white dark:bg-[#0D0F17] border border-slate-200/80 dark:border-white/[0.08] shadow-tactile flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold uppercase tracking-wider bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30">
+                    <Atom className="w-3.5 h-3.5" /> Tile 2 • Subject Portals
+                  </span>
+                  <Link
+                    href="/search"
+                    className="text-[11px] font-mono text-indigo-500 hover:underline"
+                  >
+                    All 5 Disciplines
+                  </Link>
+                </div>
+
+                <h3 className="text-lg font-heading font-bold text-slate-900 dark:text-white mb-4">
+                  Instant Subject Gateways
+                </h3>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {subjects.slice(0, 4).map((sub) => {
+                    const count = sub._count.questions + sub._count.notes;
+                    return (
+                      <Link
+                        key={sub.id}
+                        href={`/subject/${sub.slug}`}
+                        className="group/item p-3.5 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/70 dark:border-white/[0.06] hover:border-cyan-500/50 hover:bg-cyan-500/[0.03] transition-all"
+                      >
+                        <div className="w-8 h-8 rounded-xl bg-white dark:bg-white/[0.05] flex items-center justify-center mb-2 shadow-xs group-hover/item:scale-110 transition-transform">
+                          {getSubjectIcon(sub.name)}
+                        </div>
+                        <div className="font-heading font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate">
+                          {sub.name}
+                        </div>
+                        <div className="text-[11px] font-mono text-slate-400 mt-1">
+                          {count} resources
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
               </div>
-              <p className="text-xs text-slate-500 font-medium">Academic editorial quality review</p>
+
+              <div className="mt-5 pt-3 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-between text-xs font-mono text-slate-500">
+                <span>Free Open Access</span>
+                <Link
+                  href="/search?type=questions"
+                  className="text-cyan-600 dark:text-cyan-400 font-semibold hover:underline"
+                >
+                  Search Doubts &rarr;
+                </Link>
+              </div>
             </div>
-            <div className="space-y-1">
-              <div className="font-heading font-extrabold text-2xl sm:text-3xl text-cyan-500">
-                Sub-100ms
+
+            {/* Tile 3 (12-Cols): High-Yield Notes of the Week */}
+            <div className="lg:col-span-12 rounded-3xl p-6 sm:p-8 bg-white dark:bg-[#0D0F17] border border-slate-200/80 dark:border-white/[0.08] shadow-tactile space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-white/[0.06]">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center border border-amber-500/20">
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-heading font-bold text-slate-900 dark:text-white">
+                      Tile 3 • High-Yield Notes of the Week
+                    </h3>
+                    <p className="text-xs font-mono text-slate-400">
+                      Downloadable verified lecture summaries & formula sheets
+                    </p>
+                  </div>
+                </div>
+
+                <Link
+                  href="/notes"
+                  className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-amber-600 dark:text-amber-400 hover:underline self-start sm:self-center"
+                >
+                  <span>View All PDF Sheets</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
               </div>
-              <p className="text-xs text-slate-500 font-medium">Edge-cached indexed search</p>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {latestNotes.map((note) => (
+                  <div
+                    key={note.id}
+                    className="p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/70 dark:border-white/[0.06] hover:border-amber-500/40 transition-all flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 mb-2">
+                        <span className="uppercase text-amber-600 dark:text-amber-400 font-bold">
+                          {note.subject.name}
+                        </span>
+                        <span>{note.fileType || 'PDF'}</span>
+                      </div>
+                      <Link
+                        href={`/notes/${note.slug}`}
+                        className="font-heading font-bold text-sm text-slate-900 dark:text-white hover:text-amber-500 transition-colors line-clamp-2 mb-2"
+                      >
+                        {note.title}
+                      </Link>
+                      <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
+                        {note.description}
+                      </p>
+                    </div>
+
+                    <div className="mt-4 pt-3 border-t border-slate-200/50 dark:border-white/[0.04] flex items-center justify-between">
+                      <Link
+                        href={`/notes/${note.slug}`}
+                        className="text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-indigo-500 flex items-center gap-1"
+                      >
+                        Read Note <ArrowRight className="w-3 h-3" />
+                      </Link>
+                      <a
+                        href={note.fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        download
+                        className="p-1.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition-colors"
+                        title="Direct Download"
+                      >
+                        <DownloadCloud className="w-4 h-4" />
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Academic Subjects Bento Grid */}
-      <section className="py-14 border-b border-slate-200/80 dark:border-white/[0.06]">
+      {/* Bottom: Recent Community Solved Questions */}
+      <section className="py-16">
         <div className="container mx-auto px-4 max-w-6xl">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
             <div>
               <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-mono text-xs font-bold uppercase tracking-wider mb-1">
                 <BookOpen className="w-3.5 h-3.5" />
-                <span>Academic Disciplines</span>
+                <span>Peer-Reviewed Knowledge Base</span>
               </div>
               <h2 className="text-2xl sm:text-3xl font-heading font-bold text-slate-900 dark:text-white">
-                Explore by Subject
+                Recent Solved Academic Questions
               </h2>
             </div>
 
             <Link
-              href="/search"
+              href="/search?type=questions"
               className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 transition-colors"
             >
-              <span>View All Solutions</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {subjects.map((sub) => {
-              const totalItems = sub._count.questions + sub._count.notes + sub._count.videos;
-              return (
-                <Link
-                  key={sub.id}
-                  href={`/subject/${sub.slug}`}
-                  className="group relative p-5 rounded-2xl bg-white dark:bg-[#0D0F17] border border-slate-200/80 dark:border-white/[0.08] hover:border-indigo-500/40 shadow-tactile hover:shadow-glow-subtle transition-all duration-200 flex flex-col justify-between"
-                >
-                  <div>
-                    <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/[0.04] flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
-                      {getSubjectIcon(sub.name)}
-                    </div>
-                    <h3 className="font-heading font-bold text-sm sm:text-base text-slate-900 dark:text-white group-hover:text-indigo-500 transition-colors">
-                      {sub.name}
-                    </h3>
-                  </div>
-
-                  <div className="mt-4 pt-3 border-t border-slate-100 dark:border-white/[0.04] flex items-center justify-between text-[11px] font-mono text-slate-400">
-                    <span>{totalItems} items</span>
-                    <span className="text-indigo-500 group-hover:translate-x-1 transition-transform">
-                      &rarr;
-                    </span>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* Trending Solved Doubts */}
-      <section className="py-14 border-b border-slate-200/80 dark:border-white/[0.06]">
-        <div className="container mx-auto px-4 max-w-6xl">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
-            <div>
-              <div className="flex items-center gap-2 text-amber-500 font-mono text-xs font-bold uppercase tracking-wider mb-1">
-                <Flame className="w-3.5 h-3.5 text-amber-500" />
-                <span>High-Yield Solved Doubts</span>
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-heading font-bold text-slate-900 dark:text-white">
-                Trending Questions
-              </h2>
-            </div>
-
-            <Link
-              href="/trending"
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 transition-colors"
-            >
-              <span>Explore All Trending</span>
+              <span>Explore All Questions</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
@@ -347,89 +454,6 @@ export default async function HomePage() {
                 />
               );
             })}
-          </div>
-        </div>
-      </section>
-
-      {/* Study Notes & Video Lectures Dual Grid */}
-      <section className="py-14">
-        <div className="container mx-auto px-4 max-w-6xl">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            {/* Latest Notes (Col 7) */}
-            <div className="lg:col-span-7 space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-2 text-cyan-500 font-mono text-xs font-bold uppercase tracking-wider mb-1">
-                    <FileText className="w-3.5 h-3.5" />
-                    <span>Downloadable Resources</span>
-                  </div>
-                  <h3 className="text-xl sm:text-2xl font-heading font-bold text-slate-900 dark:text-white">
-                    High-Yield PDF Notes
-                  </h3>
-                </div>
-                <Link
-                  href="/notes"
-                  className="text-xs font-bold text-cyan-600 dark:text-cyan-400 hover:underline flex items-center gap-1"
-                >
-                  View All &rarr;
-                </Link>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {latestNotes.map((note) => (
-                  <NoteCard
-                    key={note.id}
-                    id={note.id}
-                    title={note.title}
-                    slug={note.slug}
-                    description={note.description}
-                    subjectName={note.subject.name}
-                    subjectSlug={note.subject.slug}
-                    fileUrl={note.fileUrl}
-                    fileType={note.fileType}
-                    fileSize={note.fileSize}
-                    tags={note.tags}
-                    createdAt={note.createdAt.toISOString()}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Video Lectures (Col 5) */}
-            <div className="lg:col-span-5 space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-2 text-amber-500 font-mono text-xs font-bold uppercase tracking-wider mb-1">
-                    <Video className="w-3.5 h-3.5" />
-                    <span>Concept Breakdowns</span>
-                  </div>
-                  <h3 className="text-xl sm:text-2xl font-heading font-bold text-slate-900 dark:text-white">
-                    Video Lessons
-                  </h3>
-                </div>
-                <Link
-                  href="/videos"
-                  className="text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1"
-                >
-                  View All &rarr;
-                </Link>
-              </div>
-
-              <div className="space-y-4">
-                {featuredVideos.map((video) => (
-                  <VideoCard
-                    key={video.id}
-                    id={video.id}
-                    title={video.title}
-                    youtubeId={video.youtubeId}
-                    description={video.description}
-                    subjectName={video.subject.name}
-                    subjectSlug={video.subject.slug}
-                    createdAt={video.createdAt.toISOString()}
-                  />
-                ))}
-              </div>
-            </div>
           </div>
         </div>
       </section>

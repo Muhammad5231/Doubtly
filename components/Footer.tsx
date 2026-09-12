@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Logo } from '@/components/Logo';
-import { Heart, Sparkles, Shield, BookOpen, Search, ExternalLink } from 'lucide-react';
+import { Heart, Sparkles, Shield, BookOpen, Search, ExternalLink, Scale, FileText, Mail, Info } from 'lucide-react';
 
 export function Footer() {
   const pathname = usePathname();
@@ -12,7 +12,7 @@ export function Footer() {
   if (isAdmin) return null;
 
   return (
-    <footer className="border-t border-slate-200/80 dark:border-white/[0.06] bg-slate-50/70 dark:bg-[#090A0F] transition-colors mt-auto">
+    <footer className="border-t border-slate-200/80 dark:border-white/[0.06] bg-slate-50/70 dark:bg-[#090A0F] transition-colors mt-auto font-sans">
       <div className="container mx-auto px-4 py-12 lg:py-16 max-w-7xl">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-8 lg:gap-12">
           {/* Brand Col */}
@@ -24,7 +24,7 @@ export function Footer() {
             </p>
             <div className="inline-flex items-center gap-2 text-[11px] font-mono text-slate-500 dark:text-slate-400 bg-white dark:bg-white/[0.03] px-3 py-1.5 rounded-xl border border-slate-200/70 dark:border-white/[0.06]">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Edge Indexed • Sub-100ms Search</span>
+              <span>Edge Indexed • Sub-100ms Search • Zero Login</span>
             </div>
           </div>
 
@@ -54,10 +54,15 @@ export function Footer() {
                   Trending Topics
                 </Link>
               </li>
+              <li>
+                <Link href="/llms.txt" className="hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors font-mono text-xs">
+                  llms.txt (AI Index)
+                </Link>
+              </li>
             </ul>
           </div>
 
-          {/* Subjects */}
+          {/* Core Subjects */}
           <div>
             <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-900 dark:text-slate-200 mb-4">
               Core Subjects
@@ -83,23 +88,45 @@ export function Footer() {
                   Computer Science
                 </Link>
               </li>
+              <li>
+                <Link href="/subject/biology" className="hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors">
+                  Biology
+                </Link>
+              </li>
             </ul>
           </div>
 
-          {/* Academic Portal */}
+          {/* Institutional & Trust */}
           <div>
             <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-900 dark:text-slate-200 mb-4">
-              Editorial Console
+              Institutional &amp; Trust
             </h4>
             <ul className="space-y-2.5 text-xs sm:text-sm text-slate-600 dark:text-slate-400 font-medium">
               <li>
-                <Link href="/admin/login" className="inline-flex items-center gap-1.5 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors">
-                  <Shield className="w-3.5 h-3.5 text-indigo-500" />
-                  <span>Admin Sign In</span>
+                <Link href="/about" className="hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors">
+                  About &amp; Verification
                 </Link>
               </li>
-              <li className="text-xs text-slate-400 pt-2 leading-relaxed">
-                Academic integrity first. Solutions are intended for conceptual mastery and independent study.
+              <li>
+                <Link href="/contact" className="hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors">
+                  Contact &amp; Corrections
+                </Link>
+              </li>
+              <li>
+                <Link href="/privacy" className="hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors">
+                  Privacy Policy
+                </Link>
+              </li>
+              <li>
+                <Link href="/terms" className="hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors">
+                  Academic Terms &amp; DMCA
+                </Link>
+              </li>
+              <li className="pt-2">
+                <Link href="/admin/login" className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-indigo-500 transition-colors">
+                  <Shield className="w-3.5 h-3.5 text-indigo-500" />
+                  <span>Admin Console</span>
+                </Link>
               </li>
             </ul>
           </div>
@@ -108,12 +135,15 @@ export function Footer() {
         {/* Bottom Bar */}
         <div className="mt-12 pt-8 border-t border-slate-200/80 dark:border-white/[0.06] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 font-mono">
           <p>© {new Date().getFullYear()} Doubtly. Free academic archive.</p>
-          <div className="flex items-center gap-1 text-slate-400">
-            <span>Crafted for frictionless, high-speed learning.</span>
+          <div className="flex items-center gap-4 text-slate-400">
+            <Link href="/privacy" className="hover:underline">Privacy</Link>
+            <span>•</span>
+            <Link href="/terms" className="hover:underline">Terms & DMCA</Link>
+            <span>•</span>
+            <Link href="/contact" className="hover:underline">Contact</Link>
           </div>
         </div>
       </div>
     </footer>
   );
 }
-

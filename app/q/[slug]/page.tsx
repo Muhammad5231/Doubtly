@@ -7,11 +7,13 @@ import { db } from '@/lib/db';
 import { HelpfulButton } from '@/components/HelpfulButton';
 import { RelatedQuestions } from '@/components/RelatedQuestions';
 import { SolutionActions } from '@/components/SolutionActions';
-import { sanitizeHtml } from '@/lib/sanitize';
+import { StemRenderer } from '@/components/StemRenderer';
 import {
   getCanonicalUrl,
   truncate,
   generateQuestionJsonLd,
+  generateBreadcrumbJsonLd,
+  extractDirectAnswerVerdict,
   SITE_NAME,
 } from '@/lib/seo';
 import { formatDate, formatBytes } from '@/lib/utils';
@@ -144,8 +146,8 @@ export default async function QuestionPage({ params }: QuestionPageProps) {
 
   const canonicalUrl = getCanonicalUrl(`/q/${question.slug}`);
 
-  // Construct JSON-LD Structured Data
-  const jsonLd = generateQuestionJsonLd({
+  // Construct JSON-LD Structured Data (QAPage + BreadcrumbList)
+  const questionJsonLd = generateQuestionJsonLd({
     title: question.title,
     body: question.body,
     answer: question.answer,
@@ -154,11 +156,27 @@ export default async function QuestionPage({ params }: QuestionPageProps) {
     url: canonicalUrl,
   });
 
+  const breadcrumbJsonLd = generateBreadcrumbJsonLd([
+    { name: 'Home', url: '/' },
+    { name: question.subject.name, url: `/subject/${question.subject.slug}` },
+    { name: question.title, url: `/q/${question.slug}` },
+  ]);
+
+  // Extract GEO Direct Answer Verdict and Core Formula for AI Search Engines
+  const { formula: geoFormula, verdict: geoVerdict } = extractDirectAnswerVerdict(
+    question.title,
+    question.answer
+  );
+
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(questionJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
 
       <div className="container mx-auto px-4 py-8 max-w-7xl min-h-screen">
@@ -228,10 +246,7 @@ export default async function QuestionPage({ params }: QuestionPageProps) {
                 <span>Problem Statement & Context</span>
               </div>
 
-              <div
-                className="prose-content text-slate-800 dark:text-slate-200 leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: sanitizeHtml(question.body) }}
-              />
+              <StemRenderer content={question.body} />
 
               {question.tags.length > 0 && (
                 <div className="mt-6 pt-4 border-t border-slate-100 dark:border-white/[0.05] flex flex-wrap gap-1.5">
@@ -247,6 +262,26 @@ export default async function QuestionPage({ params }: QuestionPageProps) {
                 </div>
               )}
             </article>
+
+            {/* AI Direct Answer / Generative Engine Optimization (GEO) Semantic Callout */}
+            <section
+              data-geo="direct-answer"
+              aria-label="Direct Answer & Core Formula"
+              className="relative overflow-hidden rounded-2xl border border-cyan-500/40 bg-gradient-to-br from-cyan-950/20 via-slate-900/60 to-indigo-950/30 p-5 sm:p-6 backdrop-blur-md shadow-sm"
+            >
+              <div className="flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider text-cyan-400 mb-2.5">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>AI Direct Answer & Core Formulation</span>
+              </div>
+              {geoFormula && (
+                <div className="mb-3 p-3.5 rounded-xl bg-black/40 border border-cyan-500/20 overflow-x-auto">
+                  <StemRenderer content={`$$${geoFormula}$$`} compact />
+                </div>
+              )}
+              <p className="text-sm sm:text-base font-medium text-slate-200 leading-relaxed">
+                {geoVerdict}
+              </p>
+            </section>
 
             {/* Verified Step-by-Step Derivation Card */}
             <section
@@ -276,10 +311,9 @@ export default async function QuestionPage({ params }: QuestionPageProps) {
               </div>
 
               {/* Solution Body */}
-              <div
-                className="prose-content text-slate-800 dark:text-slate-200 leading-relaxed font-sans"
-                dangerouslySetInnerHTML={{ __html: sanitizeHtml(question.answer) }}
-              />
+              <div className="leading-relaxed font-sans">
+                <StemRenderer content={question.answer} />
+              </div>
 
               {/* Helpful Vote & Feedback */}
               <div className="mt-8 pt-6 border-t border-slate-100 dark:border-white/[0.06] flex flex-col sm:flex-row sm:items-center justify-between gap-4">

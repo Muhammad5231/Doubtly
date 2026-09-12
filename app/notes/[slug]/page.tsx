@@ -5,10 +5,12 @@ import { notFound } from 'next/navigation';
 import { db } from '@/lib/db';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { StemRenderer } from '@/components/StemRenderer';
 import {
   getCanonicalUrl,
   truncate,
-  generateNoteJsonLd,
+  generateLearningResourceJsonLd,
+  generateBreadcrumbJsonLd,
   SITE_NAME,
 } from '@/lib/seo';
 import { formatDate, formatBytes } from '@/lib/utils';
@@ -88,13 +90,20 @@ export default async function NoteDetailPage({ params }: NoteDetailPageProps) {
   }
 
   const canonicalUrl = getCanonicalUrl(`/notes/${note.slug}`);
-  const jsonLd = generateNoteJsonLd({
+  const jsonLd = generateLearningResourceJsonLd({
     title: note.title,
     description: note.description,
     datePublished: note.createdAt.toISOString(),
     url: canonicalUrl,
     fileUrl: note.fileUrl,
   });
+
+  const breadcrumbJsonLd = generateBreadcrumbJsonLd([
+    { name: 'Home', url: '/' },
+    { name: 'Notes', url: '/notes' },
+    { name: note.subject.name, url: `/subject/${note.subject.slug}` },
+    { name: note.title, url: `/notes/${note.slug}` },
+  ]);
 
   // Google Docs PDF Viewer embed URL for cross-browser fallback
   const pdfViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(
@@ -107,24 +116,28 @@ export default async function NoteDetailPage({ params }: NoteDetailPageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
 
-      <div className="container mx-auto px-4 py-8 max-w-5xl min-h-screen">
+      <div className="container mx-auto px-4 py-8 max-w-5xl min-h-screen font-sans">
         {/* Breadcrumbs */}
         <nav
           aria-label="Breadcrumbs"
-          className="flex items-center gap-1.5 text-xs text-slate-500 mb-6 flex-wrap"
+          className="flex items-center gap-1.5 text-xs text-slate-500 mb-6 flex-wrap font-mono"
         >
-          <Link href="/" className="hover:text-primary-600 transition-colors">
+          <Link href="/" className="hover:text-indigo-500 transition-colors">
             Home
           </Link>
           <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-          <Link href="/notes" className="hover:text-primary-600 transition-colors">
+          <Link href="/notes" className="hover:text-indigo-500 transition-colors">
             Notes
           </Link>
           <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
           <Link
             href={`/subject/${note.subject.slug}`}
-            className="hover:text-primary-600 transition-colors"
+            className="hover:text-indigo-500 transition-colors uppercase"
           >
             {note.subject.name}
           </Link>
@@ -135,39 +148,39 @@ export default async function NoteDetailPage({ params }: NoteDetailPageProps) {
         </nav>
 
         {/* Note Header */}
-        <div className="bg-white dark:bg-surface-darkCard rounded-2xl border border-slate-200/90 dark:border-slate-800/90 p-6 sm:p-8 shadow-xs mb-8">
+        <div className="bg-white dark:bg-[#0D0F17] rounded-2xl border border-slate-200/80 dark:border-white/[0.08] p-6 sm:p-8 shadow-tactile mb-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <Link
                   href={`/subject/${note.subject.slug}`}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-secondary-50 text-secondary-700 dark:bg-secondary-950/70 dark:text-secondary-300 border border-secondary-100 dark:border-secondary-900/60 hover:bg-secondary-100 dark:hover:bg-secondary-900/80 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500/20 transition-colors"
                 >
-                  <span className="w-1.5 h-1.5 rounded-full bg-secondary-500" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
                   {note.subject.name}
                 </Link>
-                <span className="text-xs text-slate-400">•</span>
-                <span className="text-xs text-slate-400 flex items-center gap-1">
+                <span className="text-xs text-slate-400 font-mono">•</span>
+                <span className="text-xs text-slate-400 flex items-center gap-1 font-mono">
                   <Calendar className="w-3.5 h-3.5" />
                   {formatDate(note.createdAt)}
                 </span>
                 {note.fileSize > 0 && (
                   <>
-                    <span className="text-xs text-slate-400">•</span>
-                    <span className="text-xs text-slate-400 font-medium">
+                    <span className="text-xs text-slate-400 font-mono">•</span>
+                    <span className="text-xs text-slate-400 font-medium font-mono">
                       {formatBytes(note.fileSize)}
                     </span>
                   </>
                 )}
               </div>
 
-              <h1 className="text-2xl sm:text-3xl font-heading font-extrabold text-ink dark:text-white tracking-tight">
+              <h1 className="text-2xl sm:text-3xl font-heading font-extrabold text-slate-950 dark:text-white tracking-tight">
                 {note.title}
               </h1>
 
-              <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed max-w-3xl">
-                {note.description}
-              </p>
+              <div className="max-w-3xl">
+                <StemRenderer content={note.description} />
+              </div>
 
               {note.tags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 pt-1">

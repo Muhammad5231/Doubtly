@@ -72,7 +72,10 @@ export interface SearchOptions {
   query: string;
   subjectSlug?: string;
   type?: 'all' | 'questions' | 'notes';
-  sort?: 'relevance' | 'newest' | 'views';
+  sort?: 'relevance' | 'newest' | 'views' | 'helpful';
+  hasMath?: boolean;
+  verifiedOnly?: boolean;
+  difficulty?: string;
   page?: number;
   limit?: number;
 }
@@ -104,7 +107,7 @@ export async function searchContent(options: SearchOptions): Promise<{
   let orderByClause = `ORDER BY score DESC, created_at DESC`;
   if (sort === 'newest') {
     orderByClause = `ORDER BY created_at DESC`;
-  } else if (sort === 'views') {
+  } else if (sort === 'views' || sort === 'helpful') {
     orderByClause = `ORDER BY views DESC, score DESC`;
   }
 

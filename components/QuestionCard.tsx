@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Eye, ThumbsUp, Calendar, ChevronRight, CheckCircle2, ChevronDown, Sparkles, BookOpen, Clock } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
+import { StemRenderer } from '@/components/StemRenderer';
 
 export interface QuestionCardProps {
   id: string;
@@ -94,6 +95,8 @@ export function QuestionCard({
         <div className="mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed">
           {highlightedSnippet ? (
             <div dangerouslySetInnerHTML={{ __html: highlightedSnippet }} />
+          ) : snippet && (snippet.includes('$') || snippet.includes('\\')) ? (
+            <StemRenderer content={snippet.slice(0, 180)} compact />
           ) : (
             <p>{snippet || 'Step-by-step verified academic solution with core formula derivation.'}</p>
           )}
@@ -109,11 +112,16 @@ export function QuestionCard({
               </span>
               <span className="text-slate-400">Preview</span>
             </div>
-            <p className="text-slate-700 dark:text-slate-300 leading-relaxed font-sans">
-              {snippet
-                ? snippet.slice(0, 180) + '...'
-                : 'Identify known variables, formulate boundary constraints, and apply standard differentiation / derivation rule.'}
-            </p>
+            <div className="text-slate-700 dark:text-slate-300 leading-relaxed font-sans">
+              <StemRenderer
+                content={
+                  snippet
+                    ? snippet.slice(0, 200) + '...'
+                    : 'Identify known variables, formulate boundary constraints, and apply standard derivation rule.'
+                }
+                compact
+              />
+            </div>
             <div className="pt-1 flex justify-end">
               <Link
                 href={`/q/${slug}`}
