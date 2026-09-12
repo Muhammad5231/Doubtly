@@ -1,0 +1,126 @@
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum ContentStatus {
+  DRAFT
+  PUBLISHED
+}
+
+model Admin {
+  id           String    @id @default(uuid())
+  username     String    @unique
+  passwordHash String
+  createdAt    DateTime  @default(now())
+  lastLoginAt  DateTime?
+
+  @@map("admins")
+}
+
+model Subject {
+  id        String     @id @default(uuid())
+  name      String
+  slug      String     @unique
+  icon      String     @default("BookOpen")
+  order     Int        @default(0)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  questions Question[]
+  notes     Note[]
+  videos    Video[]
+
+  @@map("subjects")
+}
+
+model Question {
+  id           String                 @id @default(uuid())
+  subjectId    String
+  title        String
+  slug         String                 @unique
+  body         String
+  answer       String
+  tags         String[]               @default([])
+  views        Int                    @default(0)
+  status       ContentStatus          @default(PUBLISHED)
+  searchVector Unsupported("tsvector")?
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+
+  subject      Subject                @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  helpfulVotes HelpfulVote[]
+
+  @@index([subjectId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([subjectId, status, createdAt])
+  @@map("questions")
+}
+
+model Note {
+  id           String                 @id @default(uuid())
+  subjectId    String
+  title        String
+  slug         String                 @unique
+  description  String
+  tags         String[]               @default([])
+  fileUrl      String
+  fileType     String                 @default("pdf")
+  fileSize     Int                    @default(0) // In bytes
+  status       ContentStatus          @default(PUBLISHED)
+  searchVector Unsupported("tsvector")?
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+
+  subject      Subject                @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@index([subjectId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("notes")
+}
+
+model Video {
+  id          String        @id @default(uuid())
+  subjectId   String
+  title       String
+  youtubeId   String
+  description String
+  status      ContentStatus @default(PUBLISHED)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  subject     Subject       @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@index([subjectId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("videos")
+}
+
+model SearchLog {
+  id             String   @id @default(uuid())
+  query          String   @unique
+  count          Int      @default(1)
+  lastSearchedAt DateTime @default(now())
+
+  @@map("search_logs")
+}
+
+model HelpfulVote {
+  id         String   @id @default(uuid())
+  questionId String
+  ipHash     String
+  createdAt  DateTime @default(now())
+
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([questionId, ipHash])
+  @@index([questionId])
+  @@map("helpful_votes")
+}
